@@ -69,6 +69,9 @@ def download():
         shutil.rmtree(temp_dir, ignore_errors=True)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/health')
+def health():
+    return 'ok', 200
 
 if __name__ == '__main__':
     try:
