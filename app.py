@@ -16,6 +16,7 @@ def find_ffmpeg_dir():
     return None
 
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
