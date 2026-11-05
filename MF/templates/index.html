@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaForge — Загрузчик видео</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0a0c14;
+            --glass-bg: rgba(20, 24, 38, 0.78);
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --accent-gradient: linear-gradient(135deg, #FF2E63 0%, #FF8A00 100%);
+            --accent-glow: rgba(255, 46, 99, 0.4);
+            --text-main: #FFFFFF;
+            --text-muted: #8A94A6;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ---------- Фоновая анимация ---------- */
+        .bg-animation {
+            position: fixed; inset: 0; overflow: hidden; z-index: 0;
+            animation: bgFadeIn 1.6s ease-out both;
+        }
+        .blob {
+            position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.7;
+            will-change: transform; mix-blend-mode: screen;
+        }
+        .blob-1 {
+            width: 560px; height: 560px; background: rgba(255, 46, 99, 0.65); top: -12%; left: -10%;
+            animation: driftA 15s infinite ease-in-out alternate;
+        }
+        .blob-2 {
+            width: 620px; height: 620px; background: rgba(59, 130, 246, 0.55); bottom: -16%; right: -10%;
+            animation: driftB 19s infinite ease-in-out alternate;
+        }
+        .blob-3 {
+            width: 420px; height: 420px; background: rgba(255, 138, 0, 0.5); top: 38%; left: 52%;
+            animation: driftC 17s infinite ease-in-out alternate;
+        }
+        .blob-4 {
+            width: 360px; height: 360px; background: rgba(139, 92, 246, 0.5); bottom: 8%; left: 4%;
+            animation: driftD 21s infinite ease-in-out alternate;
+        }
+
+        @keyframes driftA {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(18vw, 14vh) scale(1.25); }
+            100% { transform: translate(8vw, 34vh) scale(0.95); }
+        }
+        @keyframes driftB {
+            0%   { transform: translate(0, 0) scale(1.1); }
+            50%  { transform: translate(-20vw, -12vh) scale(0.9); }
+            100% { transform: translate(-6vw, -32vh) scale(1.2); }
+        }
+        @keyframes driftC {
+            0%   { transform: translate(0, 0) scale(0.9); }
+            50%  { transform: translate(-26vw, 10vh) scale(1.3); }
+            100% { transform: translate(-12vw, -24vh) scale(1); }
+        }
+        @keyframes driftD {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(24vw, -18vh) scale(1.2); }
+            100% { transform: translate(34vw, 6vh) scale(0.9); }
+        }
+        @keyframes bgFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* ---------- Карточка и анимация появления ---------- */
+        .container { width: 100%; max-width: 540px; padding: 20px; z-index: 10; position: relative; }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 36px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            animation: cardIn 0.9s var(--ease-out) 0.15s both;
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(40px) scale(0.94); filter: blur(12px); }
+            to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+
+        .reveal {
+            animation: revealUp 0.7s var(--ease-out) both;
+            animation-delay: calc(0.45s + var(--i, 0) * 0.12s);
+        }
+        @keyframes revealUp {
+            from { opacity: 0; transform: translateY(22px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .header { display: flex; align-items: center; gap: 14px; margin-bottom: 25px; }
+        .logo-icon {
+            width: 44px; height: 44px; background: var(--accent-gradient); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; color: white;
+            box-shadow: 0 8px 20px var(--accent-glow);
+            animation: logoPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both, logoGlow 3.5s ease-in-out 1.5s infinite;
+        }
+        @keyframes logoPop {
+            from { opacity: 0; transform: scale(0.3) rotate(-25deg); }
+            to   { opacity: 1; transform: scale(1) rotate(0); }
+        }
+        @keyframes logoGlow {
+            0%, 100% { box-shadow: 0 8px 20px var(--accent-glow); }
+            50%      { box-shadow: 0 8px 32px rgba(255, 138, 0, 0.6); }
+        }
+        .logo-text h1 { font-size: 20px; font-weight: 700; }
+        .logo-text p { font-size: 13px; color: var(--text-muted); }
+
+        .input-group { margin-bottom: 20px; }
+        label { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+
+        input[type="text"] {
+            width: 100%; background: rgba(5, 5, 10, 0.6); border: 1px solid var(--border-glass);
+            border-radius: 14px; padding: 16px 18px; color: var(--text-main); font-size: 15px; outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s var(--ease-out);
+        }
+        input[type="text"]:focus { border-color: #FF2E63; box-shadow: 0 0 0 4px var(--accent-glow); transform: translateY(-1px); }
+
+        /* ---------- Кнопка ---------- */
+        .btn-download {
+            position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: var(--accent-gradient); color: white; border: none; width: 100%; padding: 17px;
+            border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 10px 25px var(--accent-glow);
+            transition: transform 0.3s var(--ease-out), filter 0.3s, box-shadow 0.3s;
+        }
+        .btn-download::after {
+            content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+            transform: skewX(-20deg);
+        }
+        .btn-download:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 14px 32px var(--accent-glow); }
+        .btn-download:hover:not(:disabled)::after { animation: shine 0.9s ease; }
+        .btn-download:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+        .btn-download:disabled { cursor: progress; filter: saturate(0.8) brightness(0.9); }
+        @keyframes shine { to { left: 130%; } }
+
+        .spinner {
+            width: 16px; height: 16px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+            animation: spin 0.7s linear infinite; display: none;
+        }
+        .btn-download.loading .spinner { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ---------- Прогресс ---------- */
+        .progress-container {
+            margin-top: 0; max-height: 0; opacity: 0; overflow: hidden;
+            background: rgba(5, 5, 10, 0.5); border: 1px solid transparent;
+            padding: 0 16px; border-radius: 16px;
+            transition: max-height 0.5s var(--ease-out), opacity 0.4s, margin-top 0.5s var(--ease-out),
+                        padding 0.5s var(--ease-out), border-color 0.4s;
+        }
+        .progress-container.visible {
+            max-height: 120px; opacity: 1; margin-top: 22px; padding: 16px; border-color: var(--border-glass);
+        }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
+        .progress-bar-bg { width: 100%; height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill {
+            width: 0%; height: 100%; background: var(--accent-gradient); border-radius: 4px;
+            background-size: 200% 100%; animation: barFlow 1.6s linear infinite;
+        }
+        @keyframes barFlow { to { background-position: -200% 0; } }
+
+        #toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: #141826; border: 1px solid var(--border-glass); color: white; padding: 14px 24px;
+            border-radius: 14px; font-weight: 600; box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); opacity: 0; z-index: 100; text-align: center; max-width: 90%;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        @media (max-width: 480px) {
+            .glass-card { padding: 26px 22px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-animation">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="blob blob-4"></div>
+    </div>
+
+    <div class="container">
+        <div class="glass-card">
+            <div class="header reveal" style="--i:0">
+                <div class="logo-icon">M</div>
+                <div class="logo-text">
+                    <h1>MediaForge</h1>
+                    <p>Исходное качество видео</p>
+                </div>
+            </div>
+
+            <div class="input-group reveal" style="--i:1">
+                <label for="urlInput">Ссылка на видео YouTube</label>
+                <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+            </div>
+
+            <button class="btn-download reveal" style="--i:2" id="downloadBtn" onclick="startDownload()">
+                <span class="spinner"></span>
+                <span id="btnText">Скачать</span>
+            </button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-info">
+                    <span id="progressStatus">Подготовка...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"><span id="toastMsg">Успешно!</span></div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const btn = document.getElementById('downloadBtn');
+        const btnText = document.getElementById('btnText');
+        const container = document.getElementById('progressContainer');
+        const fill = document.getElementById('progressBarFill');
+        const status = document.getElementById('progressStatus');
+        const percent = document.getElementById('progressPercent');
+
+        let toastTimer;
+        let busy = false;
+
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') startDownload();
+        });
+
+        function showToast(text) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = text;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 5000);
+        }
+
+        function setProgress(value, text) {
+            const v = Math.round(value);
+            fill.style.width = value + '%';
+            percent.innerText = v + '%';
+            if (text) status.innerText = text;
+        }
+
+        // Плавный прогресс: быстро растёт в начале и замедляется к ~92%, пока сервер качает файл
+        function startSmoothProgress() {
+            let current = 0;
+            let stopped = false;
+            const started = performance.now();
+
+            function step(now) {
+                if (stopped) return;
+                const t = (now - started) / 1000;
+                const target = 92 * (1 - Math.exp(-t / 9));
+                current += (target - current) * 0.08;
+                let label = 'Подключение к YouTube...';
+                if (current > 12) label = 'Скачивание потоков...';
+                if (current > 60) label = 'Финальная обработка файла...';
+                setProgress(current, label);
+                requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+            return () => { stopped = true; };
+        }
+
+        function getFileName(response) {
+            const header = response.headers.get('Content-Disposition') || '';
+            const utf8 = header.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utf8) {
+                try { return decodeURIComponent(utf8[1]); } catch (e) {}
+            }
+            const plain = header.match(/filename="?([^";]+)"?/i);
+            return plain ? plain[1] : 'MediaForge_Video.mp4';
+        }
+
+        function setBusy(state) {
+            busy = state;
+            btn.disabled = state;
+            btn.classList.toggle('loading', state);
+            btnText.innerText = state ? 'Скачиваем...' : 'Скачать';
+        }
+
+        async function startDownload() {
+            if (busy) return;
+
+            const url = urlInput.value.trim();
+            if (!url) {
+                showToast('Вставьте ссылку на видео!');
+                urlInput.focus();
+                return;
+            }
+
+            setBusy(true);
+            setProgress(0, 'Подключение к YouTube...');
+            container.classList.add('visible');
+            const stopProgress = startSmoothProgress();
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                if (!response.ok) {
+                    let message = 'Ошибка сервера';
+                    try { message = (await response.json()).error || message; } catch (e) {}
+                    throw new Error(message);
+                }
+
+                const blob = await response.blob();
+                const fileName = getFileName(response);
+
+                stopProgress();
+                setProgress(100, 'Готово!');
+
+                const downloadUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 60000);
+
+                showToast('Видео скачано!');
+                setTimeout(() => container.classList.remove('visible'), 2500);
+
+            } catch (err) {
+                stopProgress();
+                container.classList.remove('visible');
+                showToast('Ошибка: ' + err.message);
+            } finally {
+                setBusy(false);
+            }
+        }
+    </script>
+</body>
+</html>
